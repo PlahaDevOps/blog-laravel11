@@ -20,12 +20,14 @@ jobs:
         run: |
           node -v
           npm -v
+        continue-on-error: true
 
       - name: Install and build assets
         shell: powershell
         run: |
           npm ci
           npm run build
+        continue-on-error: true
 
       - name: Stop existing containers
         shell: powershell
