@@ -6,6 +6,9 @@ services:
     container_name: laravel_app
     volumes:
       - ./:/var/www
+      - vendor:/var/www/vendor
+      - storage:/var/www/storage
+      - cache:/var/www/bootstrap/cache
     networks:
       - laravel
 
@@ -42,4 +45,7 @@ networks:
 
 volumes:
   dbdata:
+  vendor:
+  storage:
+  cache:
 
