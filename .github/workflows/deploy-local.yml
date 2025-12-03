@@ -46,9 +46,11 @@ jobs:
         run: |
           Start-Sleep -Seconds 10
 
-      - name: Install composer dependencies
+      - name: Create vendor directory and install dependencies
         shell: powershell
         run: |
+          docker exec laravel_app mkdir -p /var/www/vendor
+          docker exec laravel_app chown -R www-data:www-data /var/www/vendor
           docker exec laravel_app composer install --no-interaction --prefer-dist --no-scripts
 
       - name: Run composer scripts
