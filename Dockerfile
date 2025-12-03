@@ -11,12 +11,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Use default PHP web root
 WORKDIR /var/www/html
 
-# Create dirs so Docker can mount volumes cleanly
-RUN mkdir -p /var/www/html/vendor \
-    /var/www/html/storage \
-    /var/www/html/bootstrap/cache
-
-# Copy code
+# Copy code (vendor, storage, cache are excluded via .dockerignore and will be mounted as volumes)
 COPY . .
 
 # Install PHP deps (skip scripts during build, will run later)
