@@ -8,14 +8,17 @@ RUN apt-get update && apt-get install -y \
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Use default PHP web root
 WORKDIR /var/www/html
 
-# Copy code (vendor, storage, cache are excluded via .dockerignore and will be mounted as volumes)
+# Copy code
 COPY . .
 
-# Install PHP deps (skip scripts during build, will run later)
-RUN composer install --no-interaction --prefer-dist --no-scripts
+# Install prod deps into image
+RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+
+# Laravel permissions inside image
+RUN chown -R www-data:www-data storage bootstrap/cache \
+ && chmod -R 775 storage bootstrap/cache
 
 CMD ["php-fpm"]
 
