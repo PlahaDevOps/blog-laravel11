@@ -58,11 +58,17 @@ jobs:
           if (Test-Path storage) { Write-Host "WARNING: storage still exists!" }
           if (Test-Path bootstrap/cache) { Write-Host "WARNING: bootstrap/cache still exists!" }
 
+      - name: Prune Docker build cache
+        shell: powershell
+        run: |
+          docker builder prune -f
+        continue-on-error: true
+
       - name: Build and start containers
         shell: powershell
         working-directory: ${{ github.workspace }}
         run: |
-          docker compose up -d --build
+          docker compose up -d --build --no-cache
 
       - name: Wait for containers to be ready
         shell: powershell
