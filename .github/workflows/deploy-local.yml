@@ -46,12 +46,19 @@ jobs:
         run: |
           Start-Sleep -Seconds 10
 
-      - name: Create vendor directory and install dependencies
+      - name: Create vendor directory on host
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          if (-not (Test-Path vendor)) {
+            New-Item -ItemType Directory -Path vendor
+          }
+
+      - name: Install composer dependencies
         shell: powershell
         run: |
-          docker exec laravel_app mkdir -p /var/www/vendor
-          docker exec laravel_app chown -R www-data:www-data /var/www/vendor
-          docker exec laravel_app composer install --no-interaction --prefer-dist --no-scripts
+          docker exec -u root laravel_app composer install --no-interaction --prefer-dist --no-scripts
+          docker exec -u root laravel_app chown -R www-data:www-data /var/www/vendor
 
       - name: Run composer scripts
         shell: powershell
