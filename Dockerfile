@@ -16,8 +16,9 @@ COPY . .
 # Install PHP deps (skip scripts during build, will run later)
 RUN composer install --no-interaction --prefer-dist --no-scripts
 
-# Laravel permissions
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# Create Laravel directories if they don't exist and set permissions
+RUN mkdir -p /var/www/storage /var/www/bootstrap/cache && \
+    chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
 CMD ["php-fpm"]
 
