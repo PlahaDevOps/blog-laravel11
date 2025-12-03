@@ -29,11 +29,34 @@ jobs:
           npm run build
         continue-on-error: true
 
-      - name: Stop existing containers
+      - name: Stop existing containers and remove volumes
         shell: powershell
         working-directory: ${{ github.workspace }}
         run: |
-          docker compose down
+          docker compose down -v
+
+      - name: Remove directories that will be mounted as named volumes
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          # Remove directories that will be mounted as Docker named volumes
+          # This allows Docker to create the mountpoints properly
+          if (Test-Path vendor) { 
+            Remove-Item -Recurse -Force vendor
+            Write-Host "Removed vendor directory"
+          }
+          if (Test-Path storage) { 
+            Remove-Item -Recurse -Force storage
+            Write-Host "Removed storage directory"
+          }
+          if (Test-Path bootstrap/cache) { 
+            Remove-Item -Recurse -Force bootstrap/cache
+            Write-Host "Removed bootstrap/cache directory"
+          }
+          # Verify they're gone
+          if (Test-Path vendor) { Write-Host "WARNING: vendor still exists!" }
+          if (Test-Path storage) { Write-Host "WARNING: storage still exists!" }
+          if (Test-Path bootstrap/cache) { Write-Host "WARNING: bootstrap/cache still exists!" }
 
       - name: Build and start containers
         shell: powershell
