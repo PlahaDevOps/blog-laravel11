@@ -64,11 +64,17 @@ jobs:
           docker builder prune -f
         continue-on-error: true
 
-      - name: Build and start containers
+      - name: Build containers without cache
         shell: powershell
         working-directory: ${{ github.workspace }}
         run: |
-          docker compose up -d --build --no-cache
+          docker compose build --no-cache
+
+      - name: Start containers
+        shell: powershell
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker compose up -d
 
       - name: Wait for containers to be ready
         shell: powershell
