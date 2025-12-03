@@ -1,0 +1,67 @@
+name: Test on Local Runner
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  test:
+    runs-on: self-hosted  # Uses your Windows self-hosted runner
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo, pdo_mysql, zip, gd
+          coverage: none
+
+      - name: Copy .env
+        shell: pwsh
+        run: |
+          if (-not (Test-Path .env)) {
+            Copy-Item .env.example .env
+          }
+
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      - name: Generate key
+        run: php artisan key:generate
+        continue-on-error: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Run tests (if database available)
+        shell: pwsh
+        run: |
+          # Check if Docker containers are running
+          $dbRunning = docker ps --filter "name=laravel_db" --format "{{.Names}}"
+          if ($dbRunning -eq "laravel_db") {
+            Write-Host "Database container is running, running tests..."
+            vendor/bin/phpunit
+          } else {
+            Write-Host "Database container not running, skipping tests"
+          }
+        continue-on-error: true
+

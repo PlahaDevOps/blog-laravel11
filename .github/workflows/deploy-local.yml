@@ -1,0 +1,69 @@
+name: Deploy to Local Docker
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted  # Uses your Windows self-hosted runner
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install and build assets
+        shell: pwsh
+        run: |
+          npm ci
+          npm run build
+
+      - name: Stop existing containers
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker compose down
+
+      - name: Build and start containers
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          docker compose up -d --build
+
+      - name: Wait for containers to be ready
+        shell: pwsh
+        run: |
+          Start-Sleep -Seconds 10
+
+      - name: Run migrations
+        shell: pwsh
+        run: |
+          docker exec laravel_app php artisan migrate --force
+
+      - name: Clear cache
+        shell: pwsh
+        run: |
+          docker exec laravel_app php artisan config:clear
+          docker exec laravel_app php artisan cache:clear
+          docker exec laravel_app php artisan view:clear
+
+      - name: Set permissions
+        shell: pwsh
+        run: |
+          docker exec laravel_app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+          docker exec laravel_app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+
+      - name: Show container status
+        shell: pwsh
+        run: |
+          docker ps
+
