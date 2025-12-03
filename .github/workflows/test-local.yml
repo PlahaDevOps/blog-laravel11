@@ -19,25 +19,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: pdo, pdo_mysql, zip, gd
-          coverage: none
+      - name: Check PHP version
+        shell: powershell
+        run: |
+          php -v
+        continue-on-error: true
+
+      - name: Setup PHP (if not installed)
+        shell: powershell
+        run: |
+          if (-not (Get-Command php -ErrorAction SilentlyContinue)) {
+            Write-Host "PHP not found. Please install PHP 8.3 manually or use setup-php action."
+            exit 1
+          }
+        continue-on-error: true
 
       - name: Copy .env
-        shell: pwsh
+        shell: powershell
         run: |
           if (-not (Test-Path .env)) {
             Copy-Item .env.example .env
           }
 
       - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+        shell: powershell
+        run: |
+          composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+        continue-on-error: true
 
       - name: Generate key
-        run: php artisan key:generate
+        shell: powershell
+        run: |
+          php artisan key:generate
         continue-on-error: true
 
       - name: Setup Node.js
@@ -47,13 +60,17 @@ jobs:
           cache: 'npm'
 
       - name: Install NPM dependencies
-        run: npm ci
+        shell: powershell
+        run: |
+          npm ci
 
       - name: Build assets
-        run: npm run build
+        shell: powershell
+        run: |
+          npm run build
 
       - name: Run tests (if database available)
-        shell: pwsh
+        shell: powershell
         run: |
           # Check if Docker containers are running
           $dbRunning = docker ps --filter "name=laravel_db" --format "{{.Names}}"

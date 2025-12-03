@@ -22,48 +22,48 @@ jobs:
           cache: 'npm'
 
       - name: Install and build assets
-        shell: pwsh
+        shell: powershell
         run: |
           npm ci
           npm run build
 
       - name: Stop existing containers
-        shell: pwsh
+        shell: powershell
         working-directory: ${{ github.workspace }}
         run: |
           docker compose down
 
       - name: Build and start containers
-        shell: pwsh
+        shell: powershell
         working-directory: ${{ github.workspace }}
         run: |
           docker compose up -d --build
 
       - name: Wait for containers to be ready
-        shell: pwsh
+        shell: powershell
         run: |
           Start-Sleep -Seconds 10
 
       - name: Run migrations
-        shell: pwsh
+        shell: powershell
         run: |
           docker exec laravel_app php artisan migrate --force
 
       - name: Clear cache
-        shell: pwsh
+        shell: powershell
         run: |
           docker exec laravel_app php artisan config:clear
           docker exec laravel_app php artisan cache:clear
           docker exec laravel_app php artisan view:clear
 
       - name: Set permissions
-        shell: pwsh
+        shell: powershell
         run: |
           docker exec laravel_app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
           docker exec laravel_app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
       - name: Show container status
-        shell: pwsh
+        shell: powershell
         run: |
           docker ps
 
