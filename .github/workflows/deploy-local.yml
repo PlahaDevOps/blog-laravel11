@@ -46,6 +46,12 @@ jobs:
         run: |
           Start-Sleep -Seconds 10
 
+      - name: Run composer scripts
+        shell: powershell
+        run: |
+          docker exec laravel_app composer dump-autoload
+        continue-on-error: true
+
       - name: Run migrations
         shell: powershell
         run: |

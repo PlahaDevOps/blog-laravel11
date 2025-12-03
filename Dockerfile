@@ -13,8 +13,8 @@ WORKDIR /var/www
 # Copy code
 COPY . .
 
-# Install PHP deps
-RUN composer install --no-interaction --prefer-dist
+# Install PHP deps (skip scripts during build, will run later)
+RUN composer install --no-interaction --prefer-dist --no-scripts
 
 # Laravel permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
