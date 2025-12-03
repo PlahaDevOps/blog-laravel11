@@ -13,12 +13,13 @@ WORKDIR /var/www/html
 # Copy code
 COPY . .
 
-# Install prod deps into image
-RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
-
-# Laravel permissions inside image
-RUN chown -R www-data:www-data storage bootstrap/cache \
+# Create required Laravel writable dirs BEFORE composer scripts run
+RUN mkdir -p storage bootstrap/cache \
+ && chown -R www-data:www-data storage bootstrap/cache \
  && chmod -R 775 storage bootstrap/cache
+
+# Now composer can run artisan scripts safely
+RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
 
 CMD ["php-fpm"]
 
