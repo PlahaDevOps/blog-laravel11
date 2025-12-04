@@ -86,14 +86,17 @@ jobs:
           $dbUsername = $env:DB_USERNAME
           $dbDatabase = $env:DB_DATABASE
           
-          docker exec laravel_app sh -c "test -f .env || touch .env"
-          docker exec laravel_app sh -c "sed -i '/^APP_KEY=/d' .env 2>/dev/null || true"
-          docker exec laravel_app sh -c "grep -q '^APP_URL=' .env && sed -i 's|^APP_URL=.*|APP_URL=http://localhost:5000|' .env || echo 'APP_URL=http://localhost:5000' >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_CONNECTION=' .env && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env || echo 'DB_CONNECTION=mysql' >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_HOST=' .env && sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env || echo 'DB_HOST=db' >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_DATABASE=' .env && sed -i \"s|^DB_DATABASE=.*|DB_DATABASE=$dbDatabase|\" .env || echo \"DB_DATABASE=$dbDatabase\" >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_USERNAME=' .env && sed -i \"s|^DB_USERNAME=.*|DB_USERNAME=$dbUsername|\" .env || echo \"DB_USERNAME=$dbUsername\" >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_PASSWORD=' .env && sed -i \"s|^DB_PASSWORD=.*|DB_PASSWORD=$dbPassword|\" .env || echo \"DB_PASSWORD=$dbPassword\" >> .env"
+          docker exec laravel_app sh -c 'test -f .env || touch .env'
+          docker exec laravel_app sh -c 'sed -i "/^APP_KEY=/d" .env 2>/dev/null || true'
+          docker exec laravel_app sh -c 'grep -q "^APP_URL=" .env && sed -i "s|^APP_URL=.*|APP_URL=http://localhost:5000|" .env || echo "APP_URL=http://localhost:5000" >> .env'
+          docker exec laravel_app sh -c 'grep -q "^DB_CONNECTION=" .env && sed -i "s/^DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env || echo "DB_CONNECTION=mysql" >> .env'
+          docker exec laravel_app sh -c 'grep -q "^DB_HOST=" .env && sed -i "s/^DB_HOST=.*/DB_HOST=db/" .env || echo "DB_HOST=db" >> .env'
+          $dbDatabaseCmd = "grep -q '^DB_DATABASE=' .env && sed -i 's|^DB_DATABASE=.*|DB_DATABASE=$dbDatabase|' .env || echo 'DB_DATABASE=$dbDatabase' >> .env"
+          docker exec laravel_app sh -c $dbDatabaseCmd
+          $dbUsernameCmd = "grep -q '^DB_USERNAME=' .env && sed -i 's|^DB_USERNAME=.*|DB_USERNAME=$dbUsername|' .env || echo 'DB_USERNAME=$dbUsername' >> .env"
+          docker exec laravel_app sh -c $dbUsernameCmd
+          $dbPasswordCmd = "grep -q '^DB_PASSWORD=' .env && sed -i 's|^DB_PASSWORD=.*|DB_PASSWORD=$dbPassword|' .env || echo 'DB_PASSWORD=$dbPassword' >> .env"
+          docker exec laravel_app sh -c $dbPasswordCmd
 
       - name: Validate .env configuration
         shell: powershell
@@ -108,9 +111,12 @@ jobs:
           
           docker exec laravel_app sh -c "grep -q '^DB_CONNECTION=mysql$' .env || (echo 'ERROR: DB_CONNECTION not set correctly' && exit 1)"
           docker exec laravel_app sh -c "grep -q '^DB_HOST=db$' .env || (echo 'ERROR: DB_HOST not set correctly' && exit 1)"
-          docker exec laravel_app sh -c "grep -q \"^DB_DATABASE=$dbDatabase$\" .env || (echo 'ERROR: DB_DATABASE not set correctly' && exit 1)"
-          docker exec laravel_app sh -c "grep -q \"^DB_USERNAME=$dbUsername$\" .env || (echo 'ERROR: DB_USERNAME not set correctly' && exit 1)"
-          docker exec laravel_app sh -c "grep -q \"^DB_PASSWORD=$dbPassword$\" .env || (echo 'ERROR: DB_PASSWORD not set correctly' && exit 1)"
+          $dbDatabaseCheck = "grep -q '^DB_DATABASE=$dbDatabase$' .env || (echo 'ERROR: DB_DATABASE not set correctly' && exit 1)"
+          docker exec laravel_app sh -c $dbDatabaseCheck
+          $dbUsernameCheck = "grep -q '^DB_USERNAME=$dbUsername$' .env || (echo 'ERROR: DB_USERNAME not set correctly' && exit 1)"
+          docker exec laravel_app sh -c $dbUsernameCheck
+          $dbPasswordCheck = "grep -q '^DB_PASSWORD=$dbPassword$' .env || (echo 'ERROR: DB_PASSWORD not set correctly' && exit 1)"
+          docker exec laravel_app sh -c $dbPasswordCheck
           Write-Host "Configuration validated successfully"
 
       - name: Check and generate application key
