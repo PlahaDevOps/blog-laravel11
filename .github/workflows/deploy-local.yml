@@ -60,7 +60,7 @@ jobs:
       - name: Ensure storage directories exist
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs && chmod -R 775 storage bootstrap/cache"
+          docker exec laravel_app sh -c "mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs && chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache"
         continue-on-error: true
 
       - name: Optimize Laravel
