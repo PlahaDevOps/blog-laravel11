@@ -7,9 +7,9 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: laraveluser
-      DB_PASSWORD: laravelpass
+      DB_DATABASE: ${DB_DATABASE:-laravel}
+      DB_USERNAME: ${DB_USERNAME:-laraveluser}
+      DB_PASSWORD: ${DB_PASSWORD:-laravelpass}
       # Don't set APP_KEY here - let it be read from .env file
     depends_on:
       - db
@@ -33,10 +33,10 @@ services:
     image: mysql:8.0
     container_name: laravel_db
     environment:
-      MYSQL_DATABASE: laravel
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: laraveluser
-      MYSQL_PASSWORD: laravelpass
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-laraveluser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-laravelpass}
     ports:
       - "3307:3306"
     volumes:

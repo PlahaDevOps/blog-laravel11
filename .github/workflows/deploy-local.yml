@@ -45,6 +45,11 @@ jobs:
       - name: Build and start containers
         shell: powershell
         working-directory: ${{ github.workspace }}
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'laravelpass' }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME || 'laraveluser' }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE || 'laravel' }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD || 'root' }}
         run: |
           docker compose up -d --build
 
@@ -71,24 +76,41 @@ jobs:
 
       - name: Check and configure .env file
         shell: powershell
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'laravelpass' }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME || 'laraveluser' }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE || 'laravel' }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD || 'root' }}
         run: |
+          $dbPassword = $env:DB_PASSWORD
+          $dbUsername = $env:DB_USERNAME
+          $dbDatabase = $env:DB_DATABASE
+          
           docker exec laravel_app sh -c "test -f .env || touch .env"
           docker exec laravel_app sh -c "sed -i '/^APP_KEY=/d' .env 2>/dev/null || true"
           docker exec laravel_app sh -c "grep -q '^APP_URL=' .env && sed -i 's|^APP_URL=.*|APP_URL=http://localhost:5000|' .env || echo 'APP_URL=http://localhost:5000' >> .env"
           docker exec laravel_app sh -c "grep -q '^DB_CONNECTION=' .env && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env || echo 'DB_CONNECTION=mysql' >> .env"
           docker exec laravel_app sh -c "grep -q '^DB_HOST=' .env && sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env || echo 'DB_HOST=db' >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_DATABASE=' .env && sed -i 's/^DB_DATABASE=.*/DB_DATABASE=laravel/' .env || echo 'DB_DATABASE=laravel' >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_USERNAME=' .env && sed -i 's/^DB_USERNAME=.*/DB_USERNAME=laraveluser/' .env || echo 'DB_USERNAME=laraveluser' >> .env"
-          docker exec laravel_app sh -c "grep -q '^DB_PASSWORD=' .env && sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=laravelpass/' .env || echo 'DB_PASSWORD=laravelpass' >> .env"
+          docker exec laravel_app sh -c "grep -q '^DB_DATABASE=' .env && sed -i \"s|^DB_DATABASE=.*|DB_DATABASE=$dbDatabase|\" .env || echo \"DB_DATABASE=$dbDatabase\" >> .env"
+          docker exec laravel_app sh -c "grep -q '^DB_USERNAME=' .env && sed -i \"s|^DB_USERNAME=.*|DB_USERNAME=$dbUsername|\" .env || echo \"DB_USERNAME=$dbUsername\" >> .env"
+          docker exec laravel_app sh -c "grep -q '^DB_PASSWORD=' .env && sed -i \"s|^DB_PASSWORD=.*|DB_PASSWORD=$dbPassword|\" .env || echo \"DB_PASSWORD=$dbPassword\" >> .env"
 
       - name: Validate .env configuration
         shell: powershell
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD || 'laravelpass' }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME || 'laraveluser' }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE || 'laravel' }}
         run: |
+          $dbPassword = $env:DB_PASSWORD
+          $dbUsername = $env:DB_USERNAME
+          $dbDatabase = $env:DB_DATABASE
+          
           docker exec laravel_app sh -c "grep -q '^DB_CONNECTION=mysql$' .env || (echo 'ERROR: DB_CONNECTION not set correctly' && exit 1)"
           docker exec laravel_app sh -c "grep -q '^DB_HOST=db$' .env || (echo 'ERROR: DB_HOST not set correctly' && exit 1)"
-          docker exec laravel_app sh -c "grep -q '^DB_DATABASE=laravel$' .env || (echo 'ERROR: DB_DATABASE not set correctly' && exit 1)"
-          docker exec laravel_app sh -c "grep -q '^DB_USERNAME=laraveluser$' .env || (echo 'ERROR: DB_USERNAME not set correctly' && exit 1)"
-          docker exec laravel_app sh -c "grep -q '^DB_PASSWORD=laravelpass$' .env || (echo 'ERROR: DB_PASSWORD not set correctly' && exit 1)"
+          docker exec laravel_app sh -c "grep -q \"^DB_DATABASE=$dbDatabase$\" .env || (echo 'ERROR: DB_DATABASE not set correctly' && exit 1)"
+          docker exec laravel_app sh -c "grep -q \"^DB_USERNAME=$dbUsername$\" .env || (echo 'ERROR: DB_USERNAME not set correctly' && exit 1)"
+          docker exec laravel_app sh -c "grep -q \"^DB_PASSWORD=$dbPassword$\" .env || (echo 'ERROR: DB_PASSWORD not set correctly' && exit 1)"
           Write-Host "Configuration validated successfully"
 
       - name: Check and generate application key
