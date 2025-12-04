@@ -23,9 +23,9 @@ RUN mkdir -p storage/framework/views \
  && chmod -R 775 storage bootstrap/cache
 
 # Set minimal environment variables for Laravel to bootstrap during package discovery
+# Note: APP_KEY is not set here to allow .env file to be used at runtime
 ENV APP_ENV=production
 ENV APP_DEBUG=false
-ENV APP_KEY=
 ENV DB_CONNECTION=mysql
 ENV DB_HOST=127.0.0.1
 ENV DB_PORT=3306

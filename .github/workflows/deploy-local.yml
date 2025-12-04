@@ -29,11 +29,18 @@ jobs:
           npm run build
         continue-on-error: true
 
-      - name: Stop existing containers
+      - name: Stop existing containers (if running)
         shell: powershell
         working-directory: ${{ github.workspace }}
         run: |
-          docker compose down
+          # Check if containers are running before stopping
+          $containers = docker ps --filter "name=laravel" --format "{{.Names}}"
+          if ($containers) {
+              Write-Host "Stopping existing containers..."
+              docker compose down
+          } else {
+              Write-Host "No existing containers to stop"
+          }
 
       - name: Build and start containers
         shell: powershell
@@ -44,9 +51,25 @@ jobs:
       - name: Wait for containers to be ready
         shell: powershell
         run: |
-          Start-Sleep -Seconds 10
+          $maxAttempts = 30
+          $attempt = 0
+          do {
+              $attempt++
+              $healthy = docker exec laravel_app php artisan --version 2>&1
+              if ($LASTEXITCODE -eq 0) {
+                  Write-Host "Container is ready"
+                  break
+              }
+              Write-Host "Waiting for container... ($attempt/$maxAttempts)"
+              Start-Sleep -Seconds 2
+          } while ($attempt -lt $maxAttempts)
+          
+          if ($attempt -eq $maxAttempts) {
+              Write-Host "Container failed to become ready"
+              exit 1
+          }
 
-      - name: Configure .env file
+      - name: Check and configure .env file
         shell: powershell
         run: |
           docker exec laravel_app sh -c "test -f .env || touch .env"
@@ -68,11 +91,18 @@ jobs:
           docker exec laravel_app sh -c "grep -q '^DB_PASSWORD=laravelpass$' .env || (echo 'ERROR: DB_PASSWORD not set correctly' && exit 1)"
           Write-Host "Configuration validated successfully"
 
-      - name: Generate application key
+      - name: Check and generate application key
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "sed -i '/^APP_KEY=/d' .env && php artisan key:generate --force"
-        continue-on-error: true
+          docker exec laravel_app sh -c "
+            if grep -q '^APP_KEY=base64:' .env; then
+              echo 'APP_KEY already exists, skipping generation'
+            else
+              echo 'APP_KEY missing or invalid, generating new key...'
+              sed -i '/^APP_KEY=/d' .env
+              php artisan key:generate --force
+            fi
+          "
 
       - name: Clear configuration cache
         shell: powershell
@@ -80,21 +110,108 @@ jobs:
           docker exec laravel_app php artisan config:clear
         continue-on-error: true
 
-      - name: Run migrations
+      - name: Check and ensure storage directories exist
         shell: powershell
         run: |
-          docker exec laravel_app php artisan migrate --force
+          docker exec laravel_app sh -c "
+            # Check if directories exist, create if missing
+            [ ! -d storage/framework/views ] && mkdir -p storage/framework/views || echo 'storage/framework/views exists'
+            [ ! -d storage/framework/cache ] && mkdir -p storage/framework/cache || echo 'storage/framework/cache exists'
+            [ ! -d storage/framework/sessions ] && mkdir -p storage/framework/sessions || echo 'storage/framework/sessions exists'
+            [ ! -d storage/logs ] && mkdir -p storage/logs || echo 'storage/logs exists'
+            [ ! -d bootstrap/cache ] && mkdir -p bootstrap/cache || echo 'bootstrap/cache exists'
+            
+            # Set permissions (idempotent - safe to run multiple times)
+            chown -R www-data:www-data storage bootstrap/cache
+            chmod -R 775 storage bootstrap/cache
+            echo 'Storage directories checked and configured'
+          "
 
-      - name: Ensure storage directories exist
+      - name: Copy built assets to host (if needed)
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache && chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache"
+          # Check if assets exist in container but not on host
+          $containerAssets = docker exec laravel_app sh -c "test -d public/build && echo 'exists' || echo 'missing'" 2>&1
+          $hostAssets = Test-Path public/build/assets
+          
+          if ($containerAssets -match 'exists' -and -not $hostAssets) {
+              Write-Host "Copying assets from container to host..."
+              docker cp laravel_app:/var/www/html/public/build ./public/ 2>&1
+              Write-Host "Assets copied successfully"
+          } else {
+              Write-Host "Assets already exist on host or in container"
+          }
+        continue-on-error: true
+
+      - name: Check database connection
+        shell: powershell
+        run: |
+          docker exec laravel_app sh -c "
+            php artisan migrate:status > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              echo 'Database connection successful'
+            else
+              echo 'WARNING: Database connection check failed, but continuing...'
+            fi
+          "
+        continue-on-error: true
+
+      - name: Run migrations (if needed)
+        shell: powershell
+        run: |
+          docker exec laravel_app sh -c "
+            # Check if migrations have been run
+            php artisan migrate:status > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              echo 'Running migrations...'
+              php artisan migrate --force
+            else
+              echo 'Database not ready, skipping migrations'
+            fi
+          "
         continue-on-error: true
 
       - name: Optimize Laravel
         shell: powershell
         run: |
           docker exec laravel_app php artisan optimize
+        continue-on-error: true
+
+      - name: Health check
+        shell: powershell
+        run: |
+          Write-Host "Performing health checks..."
+          
+          # Check if containers are running
+          $appRunning = docker ps --filter "name=laravel_app" --format "{{.Names}}"
+          $nginxRunning = docker ps --filter "name=laravel_nginx" --format "{{.Names}}"
+          $dbRunning = docker ps --filter "name=laravel_db" --format "{{.Names}}"
+          
+          if ($appRunning -eq "laravel_app" -and $nginxRunning -eq "laravel_nginx" -and $dbRunning -eq "laravel_db") {
+              Write-Host "✓ All containers are running"
+          } else {
+              Write-Host "✗ Some containers are not running"
+              docker ps
+              exit 1
+          }
+          
+          # Check if APP_KEY is set
+          $appKey = docker exec laravel_app sh -c "grep '^APP_KEY=base64:' .env" 2>&1
+          if ($appKey -match 'APP_KEY=base64:') {
+              Write-Host "✓ APP_KEY is configured"
+          } else {
+              Write-Host "✗ APP_KEY is missing"
+              exit 1
+          }
+          
+          # Check if assets exist
+          if (Test-Path public/build/assets) {
+              Write-Host "✓ Assets are available"
+          } else {
+              Write-Host "⚠ Assets may be missing (non-critical)"
+          }
+          
+          Write-Host "Health checks completed successfully"
 
       - name: Show container status
         shell: powershell

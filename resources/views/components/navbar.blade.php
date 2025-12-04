@@ -3,8 +3,7 @@
         <div class="flex items-center justify-between h-16">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <img class="w-8 h-8" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500"
-                        alt="Your Company">
+                    <a href="/" class="text-white font-bold text-xl">Your Company</a>
                 </div>
                 <div class="hidden md:block">
                     <div class="flex items-baseline ml-10 space-x-4">
