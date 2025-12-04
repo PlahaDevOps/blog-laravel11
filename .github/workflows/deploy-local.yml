@@ -46,10 +46,22 @@ jobs:
         run: |
           Start-Sleep -Seconds 10
 
+      - name: Configure .env file
+        shell: powershell
+        run: |
+          docker exec laravel_app sh -c "sed -i '/^APP_KEY=/d' .env && sed -i 's|^APP_URL=.*|APP_URL=http://localhost:5000|' .env && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env && sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env && sed -i 's/^DB_DATABASE=.*/DB_DATABASE=laravel/' .env && sed -i 's/^DB_USERNAME=.*/DB_USERNAME=laraveluser/' .env && sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=laravelpass/' .env || true"
+        continue-on-error: true
+
       - name: Generate application key
         shell: powershell
         run: |
-          docker exec laravel_app php artisan key:generate --force
+          docker exec laravel_app sh -c "sed -i '/^APP_KEY=/d' .env && php artisan key:generate --force"
+        continue-on-error: true
+
+      - name: Clear configuration cache
+        shell: powershell
+        run: |
+          docker exec laravel_app php artisan config:clear
         continue-on-error: true
 
       - name: Run migrations
