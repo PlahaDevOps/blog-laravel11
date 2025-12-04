@@ -47,6 +47,12 @@ jobs:
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
         continue-on-error: true
 
+      - name: Discover packages
+        shell: powershell
+        run: |
+          php artisan package:discover --ansi
+        continue-on-error: true
+
       - name: Generate key
         shell: powershell
         run: |

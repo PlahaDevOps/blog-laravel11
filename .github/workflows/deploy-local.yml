@@ -46,6 +46,12 @@ jobs:
         run: |
           Start-Sleep -Seconds 10
 
+      - name: Generate application key
+        shell: powershell
+        run: |
+          docker exec laravel_app php artisan key:generate --force
+        continue-on-error: true
+
       - name: Run migrations
         shell: powershell
         run: |
