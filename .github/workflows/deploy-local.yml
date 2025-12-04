@@ -57,6 +57,12 @@ jobs:
         run: |
           docker exec laravel_app php artisan migrate --force
 
+      - name: Ensure storage directories exist
+        shell: powershell
+        run: |
+          docker exec laravel_app sh -c "mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs && chmod -R 775 storage bootstrap/cache"
+        continue-on-error: true
+
       - name: Optimize Laravel
         shell: powershell
         run: |
