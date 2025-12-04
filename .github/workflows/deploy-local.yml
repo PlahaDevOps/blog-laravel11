@@ -94,15 +94,7 @@ jobs:
       - name: Check and generate application key
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "
-            if grep -q '^APP_KEY=base64:' .env; then
-              echo 'APP_KEY already exists, skipping generation'
-            else
-              echo 'APP_KEY missing or invalid, generating new key...'
-              sed -i '/^APP_KEY=/d' .env
-              php artisan key:generate --force
-            fi
-          "
+          docker exec laravel_app sh -c "if grep -q '^APP_KEY=base64:' .env; then echo 'APP_KEY already exists, skipping generation'; else echo 'APP_KEY missing or invalid, generating new key...'; sed -i '/^APP_KEY=/d' .env; php artisan key:generate --force; fi"
 
       - name: Clear configuration cache
         shell: powershell
@@ -113,19 +105,12 @@ jobs:
       - name: Check and ensure storage directories exist
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "
-            # Check if directories exist, create if missing
-            [ ! -d storage/framework/views ] && mkdir -p storage/framework/views || echo 'storage/framework/views exists'
-            [ ! -d storage/framework/cache ] && mkdir -p storage/framework/cache || echo 'storage/framework/cache exists'
-            [ ! -d storage/framework/sessions ] && mkdir -p storage/framework/sessions || echo 'storage/framework/sessions exists'
-            [ ! -d storage/logs ] && mkdir -p storage/logs || echo 'storage/logs exists'
-            [ ! -d bootstrap/cache ] && mkdir -p bootstrap/cache || echo 'bootstrap/cache exists'
-            
-            # Set permissions (idempotent - safe to run multiple times)
-            chown -R www-data:www-data storage bootstrap/cache
-            chmod -R 775 storage bootstrap/cache
-            echo 'Storage directories checked and configured'
-          "
+          docker exec laravel_app sh -c "[ ! -d storage/framework/views ] && mkdir -p storage/framework/views || echo 'storage/framework/views exists'"
+          docker exec laravel_app sh -c "[ ! -d storage/framework/cache ] && mkdir -p storage/framework/cache || echo 'storage/framework/cache exists'"
+          docker exec laravel_app sh -c "[ ! -d storage/framework/sessions ] && mkdir -p storage/framework/sessions || echo 'storage/framework/sessions exists'"
+          docker exec laravel_app sh -c "[ ! -d storage/logs ] && mkdir -p storage/logs || echo 'storage/logs exists'"
+          docker exec laravel_app sh -c "[ ! -d bootstrap/cache ] && mkdir -p bootstrap/cache || echo 'bootstrap/cache exists'"
+          docker exec laravel_app sh -c "chown -R www-data:www-data storage bootstrap/cache && chmod -R 775 storage bootstrap/cache && echo 'Storage directories checked and configured'"
 
       - name: Copy built assets to host (if needed)
         shell: powershell
@@ -146,29 +131,13 @@ jobs:
       - name: Check database connection
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "
-            php artisan migrate:status > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-              echo 'Database connection successful'
-            else
-              echo 'WARNING: Database connection check failed, but continuing...'
-            fi
-          "
+          docker exec laravel_app sh -c "php artisan migrate:status > /dev/null 2>&1 && echo 'Database connection successful' || echo 'WARNING: Database connection check failed, but continuing...'"
         continue-on-error: true
 
       - name: Run migrations (if needed)
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "
-            # Check if migrations have been run
-            php artisan migrate:status > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-              echo 'Running migrations...'
-              php artisan migrate --force
-            else
-              echo 'Database not ready, skipping migrations'
-            fi
-          "
+          docker exec laravel_app sh -c "php artisan migrate:status > /dev/null 2>&1 && (echo 'Running migrations...' && php artisan migrate --force) || echo 'Database not ready, skipping migrations'"
         continue-on-error: true
 
       - name: Optimize Laravel
