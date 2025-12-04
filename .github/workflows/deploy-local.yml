@@ -157,9 +157,9 @@ jobs:
           $dbRunning = docker ps --filter "name=laravel_db" --format "{{.Names}}"
           
           if ($appRunning -eq "laravel_app" -and $nginxRunning -eq "laravel_nginx" -and $dbRunning -eq "laravel_db") {
-              Write-Host "✓ All containers are running"
+              Write-Host "[OK] All containers are running"
           } else {
-              Write-Host "✗ Some containers are not running"
+              Write-Host "[ERROR] Some containers are not running"
               docker ps
               exit 1
           }
@@ -167,17 +167,17 @@ jobs:
           # Check if APP_KEY is set
           $appKey = docker exec laravel_app sh -c "grep '^APP_KEY=base64:' .env" 2>&1
           if ($appKey -match 'APP_KEY=base64:') {
-              Write-Host "✓ APP_KEY is configured"
+              Write-Host "[OK] APP_KEY is configured"
           } else {
-              Write-Host "✗ APP_KEY is missing"
+              Write-Host "[ERROR] APP_KEY is missing"
               exit 1
           }
           
           # Check if assets exist
           if (Test-Path public/build/assets) {
-              Write-Host "✓ Assets are available"
+              Write-Host "[OK] Assets are available"
           } else {
-              Write-Host "⚠ Assets may be missing (non-critical)"
+              Write-Host "[WARNING] Assets may be missing (non-critical)"
           }
           
           Write-Host "Health checks completed successfully"
