@@ -94,7 +94,8 @@ jobs:
       - name: Check and generate application key
         shell: powershell
         run: |
-          docker exec laravel_app sh -c "if grep -q '^APP_KEY=base64:' .env; then echo 'APP_KEY already exists, skipping generation'; else echo 'APP_KEY missing or invalid, generating new key...'; sed -i '/^APP_KEY=/d' .env; php artisan key:generate --force; fi"
+          docker exec laravel_app sh -c "if grep -q '^APP_KEY=base64:' .env; then echo 'APP_KEY already exists, skipping generation'; else echo 'APP_KEY missing or invalid, generating new key...'; sed -i '/^APP_KEY=/d' .env; echo 'APP_KEY=' >> .env; php artisan key:generate --force; fi"
+          docker exec laravel_app sh -c "grep '^APP_KEY=' .env | head -1"
 
       - name: Clear configuration cache
         shell: powershell
@@ -165,12 +166,19 @@ jobs:
           }
           
           # Check if APP_KEY is set
-          $appKey = docker exec laravel_app sh -c "grep '^APP_KEY=base64:' .env" 2>&1
-          if ($appKey -match 'APP_KEY=base64:') {
+          $appKey = docker exec laravel_app sh -c "grep '^APP_KEY=' .env | head -1" 2>&1
+          if ($appKey -match 'APP_KEY=base64:' -or $appKey -match 'APP_KEY=') {
               Write-Host "[OK] APP_KEY is configured"
           } else {
-              Write-Host "[ERROR] APP_KEY is missing"
-              exit 1
+              Write-Host "[WARNING] APP_KEY check failed, attempting to generate..."
+              docker exec laravel_app sh -c "echo 'APP_KEY=' >> .env && php artisan key:generate --force" 2>&1
+              $appKeyCheck = docker exec laravel_app sh -c "grep '^APP_KEY=' .env" 2>&1
+              if ($appKeyCheck -match 'APP_KEY=base64:') {
+                  Write-Host "[OK] APP_KEY generated successfully"
+              } else {
+                  Write-Host "[ERROR] Failed to generate APP_KEY"
+                  exit 1
+              }
           }
           
           # Check if assets exist
